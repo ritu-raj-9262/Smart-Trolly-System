@@ -1,0 +1,150 @@
+#include <SPI.h>
+#include <MFRC522.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SS_PIN 10
+#define RST_PIN 9
+MFRC522 rfid(SS_PIN, RST_PIN);
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+// Buttons
+#define BTN_REMOVE 2
+#define BTN_BUDGET 3
+#define BTN_FINAL 4
+
+// LEDs
+#define LED_ADD 5
+#define LED_REMOVE 6
+#define LED_FINAL 7
+
+// Buzzer
+#define BUZZER 8
+
+int totalAmount = 0;
+int itemPrice = 50;
+int budget = 500;
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("System Start");
+
+  SPI.begin();
+  rfid.PCD_Init();
+
+  // Buttons (IMPORTANT FIX)
+  pinMode(BTN_REMOVE, INPUT_PULLUP);
+  pinMode(BTN_BUDGET, INPUT_PULLUP);
+  pinMode(BTN_FINAL, INPUT_PULLUP);
+
+  // LEDs + Buzzer
+  pinMode(LED_ADD, OUTPUT);
+  pinMode(LED_REMOVE, OUTPUT);
+  pinMode(LED_FINAL, OUTPUT);
+  pinMode(BUZZER, OUTPUT);
+
+  // OLED Setup
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+
+  display.setCursor(0,0);
+  display.println("Smart Cart Ready");
+  display.display();
+}
+
+void loop() {
+
+  // -------- RFID ADD ITEM --------
+  if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+    Serial.println("Card Detected");
+
+    totalAmount += itemPrice;
+
+    digitalWrite(LED_ADD, HIGH);
+    digitalWrite(BUZZER, HIGH);
+    delay(200);
+    digitalWrite(LED_ADD, LOW);
+    digitalWrite(BUZZER, LOW);
+
+    Serial.print("Total = ");
+    Serial.println(totalAmount);
+
+    display.clearDisplay();
+    display.setCursor(0,0);
+    display.println("Item Added");
+    display.print("Total: Rs ");
+    display.println(totalAmount);
+
+    // Budget Alert
+    if (totalAmount > budget) {
+      display.println("Budget Exceeded!");
+      digitalWrite(BUZZER, HIGH);
+      delay(300);
+      digitalWrite(BUZZER, LOW);
+    }
+
+    display.display();
+
+    rfid.PICC_HaltA();
+    delay(500);
+  }
+
+  // -------- REMOVE ITEM --------
+  if (digitalRead(BTN_REMOVE) == LOW) {
+    Serial.println("Remove Button Pressed");
+
+    totalAmount -= itemPrice;
+    if (totalAmount < 0) totalAmount = 0;
+
+    digitalWrite(LED_REMOVE, HIGH);
+    delay(200);
+    digitalWrite(LED_REMOVE, LOW);
+
+    display.clearDisplay();
+    display.setCursor(0,0);
+    display.println("Item Removed");
+    display.print("Total: Rs ");
+    display.println(totalAmount);
+    display.display();
+
+    delay(300);
+  }
+
+  // -------- SHOW BUDGET --------
+  if (digitalRead(BTN_BUDGET) == LOW) {
+    Serial.println("Budget Button Pressed");
+
+    display.clearDisplay();
+    display.setCursor(0,0);
+    display.println("Current Total");
+    display.print("Rs: ");
+    display.println(totalAmount);
+    display.display();
+
+    delay(300);
+  }
+
+  // -------- FINAL BILL --------
+  if (digitalRead(BTN_FINAL) == LOW) {
+    Serial.println("Final Bill Generated");
+
+    digitalWrite(LED_FINAL, HIGH);
+
+    display.clearDisplay();
+    display.setCursor(0,0);
+    display.println("FINAL BILL");
+    display.print("Amount: Rs ");
+    display.println(totalAmount);
+    display.display();
+
+    delay(2000);
+
+    digitalWrite(LED_FINAL, LOW);
+  }
+}
