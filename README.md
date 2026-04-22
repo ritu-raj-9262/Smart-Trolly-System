@@ -170,7 +170,9 @@ The Smart Trolley System is an efficient and innovative solution for modern reta
 
 ## 🧑‍💻 Developed By
 
-* Your Name
-* Course / College Name
+* Ritu Raj(24MCA20287)
+* MD Shahjad Raja
+* Shruti Sharma
+* MCA/ Chandigarh University Punjab
 
 ---
